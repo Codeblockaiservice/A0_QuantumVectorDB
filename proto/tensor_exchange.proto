@@ -1,0 +1,104 @@
+/*
+ * ==============================================================================
+ * [Meta-Tags]
+ * @module L2_범용_AI_공통_개방망.티어7_외부_교신_및_API_게이트웨이
+ * @alias Tensor_Exchange_IDL
+ * @tier 7
+ * @keywords Protobuf v3, IDL, Zero-Serialization, Language Agnostic Contract, gRPC
+ * 
+ * [파일 개요 (File Overview)]
+ * - 파일명: tensor_exchange.proto
+ * - 모듈명: 통합 OS V6.0 - Tier 7: 텐서 교환 규격 정의 (절대 언어 명세서)
+ * - 기능 및 역할: 통합 OS(Java)와 이기종 AI 코어(Python/C++) 간의 텐서 교환 규격을 수학적으로 정의하는 IDL 명세서.
+ * - 이론 및 기술: Protocol Buffers v3, Interface Definition Language (IDL), Language Agnostic Contract.
+ * - 💡 [V6.0 배관 관통]: 더미(Mock) 클래스로 방치되었던 텐서 교환 메시지와 서비스를 물리적인 .proto 파일로 창설하여, Maven 빌드 시 `protobuf-maven-plugin`이 자바 Stub 클래스들을 O(1) 속도로 자동 주조(Generate)하도록 배관을 개통했습니다.
+ * - 💡 [명칭 교정]: 지시사항에 따라 금기어를 영구 소각하고 '통합 OS'로 전면 치환했습니다.
+ * ==============================================================================
+ */
+
+syntax = "proto3";
+
+// [1. 한글 상세 주석]
+// 💡 Java 컴파일 환경을 위한 필수 옵션 설정.
+// 생성될 Stub 클래스들의 패키지 경로를 422071 모듈의 Import 경로와 완벽히 동기화시킵니다.
+// [2. 영문 상세 주석]
+// 💡 Essential option settings for the Java compilation environment.
+// Perfectly synchronizes the package path of the generated Stub classes with the Import path of the 422071 module.
+// [3. Protobuf 코드]
+option java_multiple_files = true;
+option java_package = "A0_QuantumVectorDB_양자벡터DB.grpc.stub";
+option java_outer_classname = "TensorExchangeProto";
+
+// [1. 한글 상세 주석]
+// 💡 외부 Python/C++ 에이전트가 통합 OS에게 텐서 데이터(단면)를 요구할 때 전송하는 질의(Query) 캡슐입니다.
+// [2. 영문 상세 주석]
+// 💡 A query capsule transmitted when external Python/C++ agents request tensor data (cross-section) from the Integrated OS.
+// [3. Protobuf 코드]
+message TensorRequest {
+  // 타격할 지표의 논리적 명칭 (예: "BASE_CLOSE")
+  string feature_name = 1;
+  
+  // 지능형 호적부에 등록된 지표의 Z축 물리적 인덱스
+  int32 feature_index = 2;
+  
+  // 추출을 시작할 1D 평면 매트릭스의 물리적 바이트 시작 위치 (Absolute Offset)
+  int64 start_byte_offset = 3;
+  
+  // 외부 모델이 한 번의 배치(Batch)로 흡수하길 원하는 총 바이트 크기
+  int64 requested_byte_size = 4;
+}
+
+// [1. 한글 상세 주석]
+// 💡 통합 OS가 요청을 수락하고 O(1) 속도로 커널 메모리를 직사(Direct Fire)할 때 반환하는 응답 캡슐입니다.
+// 객체 직렬화 오버헤드를 멸균하기 위해 `raw_data_payload`는 순수 `bytes` 타입으로 선언됩니다.
+// [2. 영문 상세 주석]
+// 💡 A response capsule returned when the Integrated OS accepts the request and direct-fires the kernel memory at O(1) speed.
+// To sterilize object serialization overhead, `raw_data_payload` is declared as a pure `bytes` type.
+// [3. Protobuf 코드]
+message TensorResponse {
+  // 응답에 포함된 지표의 논리적 명칭
+  string feature_name = 1;
+  
+  // 실제로 사출된 바이트 배열의 크기 (요청 크기와 다를 수 있음 - Truncation 방어)
+  int64 byte_size = 2;
+  
+  // 💡 [Zero-Copy 핵심] 직렬화를 거치지 않고 오프힙 메모리를 그대로 쏟아부은 순수 바이너리 텐서 파동
+  bytes raw_data_payload = 3;
+}
+
+// [1. 한글 상세 주석]
+// 💡 통합 OS와 이기종 AI 생태계를 연결하는 gRPC 통신 서비스 인터페이스입니다.
+// [2. 영문 상세 주석]
+// 💡 A gRPC communication service interface connecting the Integrated OS and heterogeneous AI ecosystems.
+// [3. Protobuf 코드]
+service TensorExchangeService {
+  // [단방향 초고속 스트리밍 통신] 
+  // 외부 코어가 TensorRequest를 보내면, 통합 OS는 대역폭 한계까지 TensorResponse를 반환합니다.
+  rpc FetchTensorBatch (TensorRequest) returns (TensorResponse);
+}
+
+/*
+ * =============================================================================
+ * 🧠 [이론적 배경 및 철학 (Theoretical Background & Philosophy)]
+ * 
+ * 1. 인터페이스 정의 언어 (IDL, Interface Definition Language)의 절대성:
+ * 서로 다른 언어(Java, Python, C++, Rust)로 작성된 시스템들이 소통할 때, 각자의 언어로 
+ * 클래스를 수동으로 정의하면 필연적으로 타입 불일치(Type Mismatch)와 파싱 에러가 발생합니다.
+ * Protocol Buffers(proto3)는 이기종 생태계 사이에서 수학적 증명과도 같은 '언어 독립적 계약(Language Agnostic Contract)'을 수립합니다.
+ * 이 명세서 단 하나만 존재하면, 메이븐 빌드 파이프라인(`protoc`)이 자바의 Stub 클래스를 자동으로 주조하며, 
+ * 파이썬(AI) 코어 역시 이 명세서를 바탕으로 완벽히 동일한 구조의 수신 코드를 생성해 냅니다.
+ * 
+ * 2. Zero-Serialization (직렬화 멸균)과 `bytes` 타입의 역학:
+ * 일반적으로 gRPC를 사용할 때 배열 데이터를 `repeated float data` 형태로 선언합니다. 
+ * 그러나 이 방식은 1억 개의 부동소수점을 전송할 때 1억 번의 반복 순회와 직렬화/역직렬화 오버헤드를 유발하여 
+ * CPU를 불태우는 열역학적 낭비를 초래합니다.
+ * 통합 OS는 `raw_data_payload` 필드를 순수 `bytes` 타입으로 맹목적으로 선언했습니다. 
+ * 이는 자바의 FFM `MemorySegment`를 힙(Heap) 복사 없이(Zero-Copy) 네트워크 소켓으로 직접 덤프(Direct Dump)하기 위함입니다. 
+ * 파이썬은 이 바이트 스트림을 받는 즉시 `np.frombuffer`를 통해 파싱 오버헤드 0초 만에 텐서를 복원합니다.
+ * 
+ * 3. 단일 진실 공급원 (SSOT, Single Source of Truth):
+ * 422071 gRPC 수신소 내부에 하드코딩되었던 수많은 더미(Mock) 클래스들은 이 명세서가 창설됨과 동시에 존재 이유를 상실합니다.
+ * 이제 이 `.proto` 파일이 클러스터 통신의 유일한 법전(SSOT)이 되며, 시스템이 확장되더라도
+ * 모든 통신 규격의 변경은 오직 이 파일 내에서만 통제되는 극강의 아키텍처 결벽증을 완성했습니다.
+ * =============================================================================
+ */

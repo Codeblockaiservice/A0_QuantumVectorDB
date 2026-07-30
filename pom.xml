@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ==============================================================================
+ [Meta-Tags]
+ @module L1_기저_아카이브_및_원시_데이터망.프로젝트_빌드_인프라
+ @alias Project_Object_Model_Core
+ @tier 0
+ @keywords Dependency Management, Protobuf IDL Compilation, Build Pipeline, AWS CRT, TransferManager, PDFBox, POI
+ 
+ [파일 개요 (File Overview)]
+ - 파일명: pom.xml
+ - 기능 및 역할: 통합 OS의 심장부로, 외부 라이브러리 공급 및 빌드 파이프라인(생태계)을 통제합니다.
+ - 이론 및 기술: Dependency Management (의존성 관리), Protobuf IDL Compilation (인터페이스 정의 언어 컴파일), Native C Binding (AWS CRT), Hexagonal Architecture (육각 아키텍처).
+ - 💡 [V6.1 컴파일 붕괴 수술]: L5 마스터 파사드에서 비정형 문헌(PDF, DOCX)의 실제 추출을 담당하는 어댑터 클래스가 창설됨에 따라 발생한 심볼 탐색 실패(`cannot find symbol`)를 멸균하기 위해 `pdfbox`와 `poi-ooxml` 의존성을 명시적으로 주입했습니다.
+ - 💡 [V6.1 배관 수복]: S3 클라우드 어댑터(424041)의 멀티파트 전송 매니저 격상에 따른 물리적 종속성 진공 상태를 해결하기 위해 `s3-transfer-manager`와 `aws-crt-client`를 주입하여 파이프라인을 관통시켰습니다.
+ - 💡 [V6.0 긴급 수복]: OOM 방어망(Caffeine Cache) 주입 시 발생한 Maven Central 해소 실패를 막기 위해, Group ID의 식별자 오타(`benmanes` -> `ben-manes`)를 교정했습니다.
+ ==============================================================================
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.a0.system</groupId>
+    <artifactId>A0_HYPER</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <!-- Arrow Flight 버전을 속성으로 관리하여 의존성 간 충돌 방지 -->
+        <arrow.version>15.0.0</arrow.version>
+        <!-- gRPC 및 AWS SDK 버전 일괄 관리를 위한 속성 추가 -->
+        <grpc.version>1.59.0</grpc.version>
+        <aws.sdk.version>2.21.0</aws.sdk.version>
+    </properties>
+
+    <!-- 💡 [수복 1] Arrow BOM 도입: 거미줄 같은 Arrow 하위 의존성 버전을 15.0.0으로 완벽히 통일 및 강제 록인 -->
+    <!-- 💡 [신규] AWS BOM 도입: AWS SDK v2 하위 모듈 간 버전 충돌 방지 및 안전성 확보 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.arrow</groupId>
+                <artifactId>arrow-bom</artifactId>
+                <version>${arrow.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- [1. 한글 상세 주석] -->
+        <!-- 💡 [V6.1 컴파일 에러 수복] 비정형 문헌(PDF, DOCX) 추출 어댑터를 위한 핵심 라이브러리 주입. -->
+        <!-- L5 마스터 파사드의 `바이너리_문헌_추출_어댑터_구현체`가 요구하는 PDDocument, PDFTextStripper 및 XWPFDocument 심볼을 공급하여 빌드 붕괴를 물리적으로 멸균합니다. -->
+        <!-- [2. 영문 상세 주석] -->
+        <!-- 💡 [V6.1 Compile Error Fixed] Inject core libraries for the unstructured document (PDF, DOCX) extraction adapter. -->
+        <!-- Supplies the PDDocument, PDFTextStripper, and XWPFDocument symbols required by the L5 Master Facade's adapter implementation, physically sterilizing the build collapse. -->
+        <!-- [3. XML 코드] -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.30</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
+        <!-- [1. 한글 상세 주석] -->
+        <!-- 💡 [V6.1 배관 수복] AWS S3 클라우드 오프로딩 어댑터 (424041 모듈용) -->
+        <!-- 기존의 단일 s3 모듈에 더해, 비동기 멀티파트 전송을 관장하는 s3-transfer-manager와 C++ 기반의 초고속 I/O를 지원하는 aws-crt-client를 물리적으로 개통하여 심볼 탐색 실패를 멸균합니다. -->
+        <!-- [2. 영문 상세 주석] -->
+        <!-- 💡 [V6.1 Plumbing Restored] AWS S3 Cloud Offloading Adapter (for 424041 module) -->
+        <!-- Physically opens the s3-transfer-manager for async multipart transfers and aws-crt-client for ultra-high-speed C++ based I/O to sterilize symbol resolution failures. -->
+        <!-- [3. XML 코드] -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3-transfer-manager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-crt-client</artifactId>
+        </dependency>
+
+        <!-- 💡 gRPC 및 Protobuf 코어 의존성 (422071 모듈 및 protobuf-maven-plugin용) -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+
+        <!-- 💡 웹소켓 실시간 스트리밍 통신망 (422072 모듈용) -->
+        <dependency>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-api</artifactId>
+            <version>1.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.tyrus</groupId>
+            <artifactId>tyrus-server</artifactId>
+            <version>1.20</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.tyrus</groupId>
+            <artifactId>tyrus-container-grizzly-server</artifactId>
+            <version>1.20</version>
+        </dependency>
+
+        <!-- 💡 Apache Arrow Flight Zero-Copy RPC (424020 모듈용) -->
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>flight-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-memory-netty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>flight-grpc</artifactId>
+        </dependency>
+        <!-- VectorSchemaRoot 및 CallContext 심볼 누락 멸균을 위한 명시적 주입 -->
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-vector</artifactId>
+        </dependency>
+
+        <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+        <!-- 기존 코어 의존성 목록 -->
+        <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquery</artifactId>
+            <version>2.38.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
+            <version>2.35.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20231013</version>
+        </dependency>
+        <dependency>
+             <groupId>com.sun.mail</groupId>
+             <artifactId>javax.mail</artifactId>
+             <version>1.6.2</version>
+        </dependency>
+        <dependency>
+              <groupId>com.microsoft.onnxruntime</groupId>
+              <artifactId>onnxruntime</artifactId>
+              <version>1.17.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-core</artifactId>
+            <version>1.0.0-M2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native-platform</artifactId>
+            <version>1.0.0-M2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>ml.dmlc</groupId>
+            <artifactId>xgboost4j_2.12</artifactId>
+            <version>1.7.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.haifengl</groupId>
+            <artifactId>smile-core</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.45.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.24.3</version>
+        </dependency>
+        <dependency>
+           <groupId>org.graalvm.polyglot</groupId>
+           <artifactId>polyglot</artifactId>
+           <version>23.1.0</version>
+       </dependency>
+       <dependency>
+           <groupId>org.graalvm.truffle</groupId>
+           <artifactId>truffle-api</artifactId>
+           <version>23.1.0</version>
+       </dependency>
+        <dependency>
+         <groupId>org.apache.kafka</groupId>
+         <artifactId>kafka-clients</artifactId> 
+         <version>3.6.0</version>
+       </dependency>
+       
+       <!-- [1. 한글 상세 주석] -->
+       <!-- 💡 [긴급 수복] OOM 방어망을 위한 Caffeine 캐시 의존성 주입. 기존 GroupID의 오타('benmanes' -> 'ben-manes')로 인한 Maven Central 탐색 파열을 수복했습니다. -->
+       <!-- [2. 영문 상세 주석] -->
+       <!-- 💡 [Urgent Fix] Dependency injection of Caffeine cache for OOM defense network. Repaired the Maven Central resolution rupture caused by a typo in the GroupID ('benmanes' -> 'ben-manes'). -->
+       <!-- [3. XML 코드] -->
+       <dependency>
+           <groupId>com.github.ben-manes.caffeine</groupId>
+           <artifactId>caffeine</artifactId>
+           <version>3.1.8</version> <!-- Java 11+ 호환 최신 안정화 버전 -->
+       </dependency>
+    </dependencies>
+
+    <build>
+        <!-- OS 감지 확장을 통한 protoc 실행 파일 결정 배관 -->
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+        
+        <plugins>
+            <!-- Protobuf-Maven-Plugin 배관 개통 -->
+            <!-- 이 플러그인은 src/main/proto 폴더 내의 .proto 파일을 탐지하여 -->
+            <!-- 컴파일 사이클 중 자동으로 gRPC Stub 자바 클래스를 주조(Generate)합니다. -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:3.24.0:exe:${os.detected.classifier}</protocArtifact>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>compile-custom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                        <arg>-Xlint:-options</arg>
+                        <arg>-proc:none</arg>
+                        <!-- DCE 방어 및 Contended 어노테이션 컴파일을 위한 내부 API 개방 -->
+                        <arg>--add-exports</arg>
+                        <arg>java.base/jdk.internal.vm.annotation=ALL-UNNAMED</arg>
+                        <!-- Arrow Netty 할당기가 Java 21 커널 메모리에 접근하기 위한 물리적 권한 개방 -->
+                        <arg>--add-opens</arg>
+                        <arg>java.base/java.nio=ALL-UNNAMED</arg>
+                        <!-- Java Vector API 인큐베이팅 모듈 강제 가시성 개방 -->
+                        <arg>--add-modules</arg>
+                        <arg>jdk.incubator.vector</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <!-- 런타임 실행 시에도 Vector API 모듈 개방 -->
+                    <commandlineArgs>--enable-preview --add-modules jdk.incubator.vector --add-exports java.base/jdk.internal.vm.annotation=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED -classpath %classpath ${exec.mainClass}</commandlineArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+<!--
+ =============================================================================
+ 🧠 [심층 철학 (Theoretical Background & Philosophy)]
+ 
+ 1. 육각 아키텍처(Hexagonal Architecture)와 코어 방어막:
+ 빌드 파일(pom.xml)에 `pdfbox`나 `poi-ooxml` 같은 무거운 외부 라이브러리를 추가하는 행위가 코어 시스템(L1~L4)의 
+ 오염을 의미하지는 않습니다. 
+統合 OS V6.1의 진정한 철학은 "외부 의존성을 어디서 조립하느냐"에 있습니다. 이 의존성들은 오직 최외곽 경계인 
+ L5 마스터 파사드의 어댑터(Adapter)를 창조하기 위해서만 소비되며, 시스템의 심장부인 T16 해체 도끼는 
+ `외부_비정형_문헌_추출_포트`라는 순수한 인터페이스만으로 외부 세계와 소통합니다. 
+ 이것이 외부 생태계의 복잡성을 흡수하면서도 시스템 코어의 결벽증적 무결성을 지켜내는 의존성 역전(DIP)의 완벽한 실현입니다.
+
+ 2. 의존성 관제망의 대수학적 무결성 (Algebraic Integrity of Dependency Graph):
+ Maven은 단순한 다운로드 스크립트가 아니라, 전 세계의 자바 라이브러리 생태계를 연결하는 위상 수학적(Topological) 
+ 그래프 엔진입니다. GroupID, ArtifactID, Version이라는 3차원 좌표계를 통해 정확한 컴포넌트를 조준하여 타격합니다.
+ 이전 설정에서 `com.github.benmanes.caffeine`라고 입력된 GroupID는 이 3차원 우주에 존재하지 않는 허수(Imaginary Number)의 좌표였습니다.
+ 하이픈(`-`) 하나가 빠진 것은 단순한 오타가 아니라, 시스템 공학 관점에서는 참조하려는 우주 공간 전체가 
+ 뒤틀린 치명적인 좌표계 오류입니다. 
+ 본 수술을 통해 정확한 좌표 `com.github.ben-manes.caffeine`로 교정함으로써, 통합 OS의 빌드 파이프라인은 
+ 다시 완벽한 열역학적 평형을 되찾았습니다.
+ 
+ 3. 기계적 공감과 AWS CRT 클라이언트 (Mechanical Sympathy with AWS CRT):
+ 일반적인 AWS SDK S3 클라이언트는 자바 기반의 Apache HTTP Client나 Netty에 의존하여 통신합니다.
+ 하지만 수백 기가바이트의 텐서 청크(Chunk)를 S3로 비동기 업로드/다운로드해야 하는 424041 모듈(아카이빙 데몬)의 경우,
+ 자바의 힙 메모리를 거쳐 직렬화되는 과정 자체가 성능의 치명적 족쇄가 됩니다.
+ 수복 과정에서 명시적으로 추가된 `aws-crt-client`는 자바를 벗어나 C언어로 작성된 AWS Common Runtime(CRT) 네이티브 바인딩을
+ 직접 타격합니다. 이는 통합 OS가 추구하는 Zero-Allocation 철학과 완벽히 일치하며, 
+ JVM 가비지 컬렉터(GC)의 개입 없이 네트워크 스택의 극한 스루풋(Throughput)을 쥐어짜내는 기하학적 배관 확장입니다.
+
+ 4. 중앙 통제 생태계 (BOM)와 의존성 충돌 방어:
+ POM(Project Object Model)은 시스템의 유전 정보(DNA)를 담고 있습니다. 
+ 특히 Arrow와 AWS SDK처럼 하위 모듈 수십 개를 거느린 거대 프레임워크들은 각자의 생태계에서 버전 충돌 
+ (Dependency Hell)을 유발하기 쉽습니다. 
+ 이 POM 파일은 `<dependencyManagement>` 계층에 BOM(Bill of Materials)을 강제 주입하여, 
+ 하위 모듈들이 각자 다른 버전을 요구하더라도 OS 관제탑이 지정한 절대 버전으로 강제 록인(Lock-in)시키는 
+ 강력한 계층적 통제권을 발휘하고 있습니다.
+ =============================================================================
+ 
+ 💡 [입문자 해설]
+ 컴퓨터에게 프로그램 조립 설명서(pom.xml)를 주고 부품을 가져오라고 시켰습니다.
+ 이번에 사령관님(L5 마스터 파사드)이 "PDF 문서와 엑셀 파일을 읽을 수 있는 새로운 번역기를 가져와!"라고 지시하셨죠.
+ 그래서 이 설명서 중간에 `pdfbox`와 `poi-ooxml`이라는 새로운 부품 코드를 적어두었습니다.
+ 
+ 이 부품들은 공장 한가운데(핵심 엔진)로 들어가는 것이 아니라, 공장 맨 바깥 입구(마스터 파사드)에만 설치됩니다.
+ 그래서 외부 라이브러리(부품)가 고장나거나 바이러스가 걸려도, 우리 공장 핵심 기계들은 전혀 피해를 받지 않습니다.
+ 이것이 바로 우리 통합 OS가 안전하게 바깥 세상과 소통하는 훌륭한 방법입니다.
+ =============================================================================
+-->
