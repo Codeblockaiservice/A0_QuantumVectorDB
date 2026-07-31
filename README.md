@@ -6,7 +6,7 @@
 
 ### 1. Overview
 
-**A0_QuantumVectorDB** is a national-grade, multidimensional vector database and AI orchestration OS that physically overcomes the limits of JVM Heap memory and completely sterilizes Garbage Collection (GC) Stop-The-World latencies. Based on the philosophy of Zero-Allocation and Mechanical Sympathy, it achieves the extreme ultra-low latency throughput required in High-Frequency Trading (HFT) and massive tensor operations.
+**A0_QuantumVectorDB** is a multidimensional vector database and AI orchestration OS that physically overcomes the limits of JVM Heap memory and completely sterilizes Garbage Collection (GC) Stop-The-World latencies. Based on the philosophy of Zero-Allocation and Mechanical Sympathy, it achieves the extreme ultra-low latency throughput required in High-Frequency Trading (HFT) and massive tensor operations.
 
 ### 2. Core Technologies
 
@@ -65,7 +65,7 @@ This system goes far beyond a simple application written in Java; it is a **"Dat
 
 ### 1. 개요 (Overview)
 
-**A0_QuantumVectorDB**는 JVM의 힙(Heap) 메모리 한계를 물리적으로 극복하고, 가비지 컬렉션(GC)으로 인한 지연(Stop-The-World)을 완벽히 멸균한 국가급 다차원 벡터 데이터베이스 및 AI 오케스트레이션 OS입니다. 제로 얼로케이션(Zero-Allocation)과 기계적 공감(Mechanical Sympathy) 철학을 바탕으로, 초고빈도 매매(HFT)와 대규모 텐서 연산에서 요구되는 극한의 저지연(Ultra-Low Latency) 스루풋을 달성합니다.
+**A0_QuantumVectorDB**는 JVM의 힙(Heap) 메모리 한계를 물리적으로 극복하고, 가비지 컬렉션(GC)으로 인한 지연(Stop-The-World)을 완벽히 멸균한 다차원 벡터 데이터베이스 및 AI 오케스트레이션 OS입니다. 제로 얼로케이션(Zero-Allocation)과 기계적 공감(Mechanical Sympathy) 철학을 바탕으로, 초고빈도 매매(HFT)와 대규모 텐서 연산에서 요구되는 극한의 저지연(Ultra-Low Latency) 스루풋을 달성합니다.
 
 ### 2. 핵심 기술 (Technologies)
 
