@@ -1,5 +1,7 @@
 # A0_QuantumVectorDB
 
+"We are currently refining the terminology to enhance system versatility."
+
 ## 🚀 Quantum Vector DB & HFT AI Inference Engine
 
 ### 1. Overview
@@ -58,6 +60,8 @@ This system goes far beyond a simple application written in Java; it is a **"Dat
 ---
 
 ## 🚀 Quantum Vector DB & HFT AI Inference Engine
+
+"현재 시스템의 범용성을 높이기 위해 용어 순화 작업을 진행 중입니다."
 
 ### 1. 개요 (Overview)
 
